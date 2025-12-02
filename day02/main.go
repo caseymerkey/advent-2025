@@ -42,14 +42,14 @@ func main() {
 	var startTime = time.Now()
 	result := part1(ranges)
 	fmt.Printf("Part 1: %d\n", result)
-	executionTime := float32(time.Since(startTime).Milliseconds()) / float32(1000)
-	fmt.Printf("Completed Part 1 in %f seconds\n\n", executionTime)
+	executionTime := time.Since(startTime).Microseconds()
+	fmt.Printf("Completed Part 1 in %d µs\n\n", executionTime)
 
 	startTime = time.Now()
 	result = part2(ranges)
 	fmt.Printf("Part 2: %d\n", result)
-	executionTime = float32(time.Since(startTime).Milliseconds()) / float32(1000)
-	fmt.Printf("Completed Part 2 in %f seconds\n", executionTime)
+	executionTime = time.Since(startTime).Microseconds()
+	fmt.Printf("Completed Part 2 in %d µs\n", executionTime)
 }
 
 func part1(ranges []idRange) int {
