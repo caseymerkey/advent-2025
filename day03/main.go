@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -38,11 +39,17 @@ func main() {
 	var startTime = time.Now()
 	result := part1(banks)
 	fmt.Printf("Part 1: %d\n", result)
-	executionTime := time.Since(startTime).Milliseconds()
-	fmt.Printf("Completed Part 1 in %d ms\n\n", executionTime)
+	executionTime := time.Since(startTime).Microseconds()
+	fmt.Printf("Completed Part 1 in %d µs\n\n", executionTime)
+
+	startTime = time.Now()
+	result = part2(banks)
+	fmt.Printf("Part 2: %d\n", result)
+	executionTime = time.Since(startTime).Microseconds()
+	fmt.Printf("Completed Part 2 in %d µs\n", executionTime)
 }
 
-func part1(banks [][]int) any {
+func part1(banks [][]int) int {
 	total := 0
 	for _, bank := range banks {
 		highestTen := 0
@@ -61,6 +68,40 @@ func part1(banks [][]int) any {
 			}
 		}
 		total += ((10 * highestTen) + highestOne)
+	}
+	return total
+}
+
+func part2(banks [][]int) int {
+	total := 0
+
+	for _, bank := range banks {
+		highestDigits := make([]int, 12)
+		highestDigitIndexes := make([]int, 12)
+
+		for power := 11; power >= 0; power-- {
+			rangeStart := 0
+			if power < 11 {
+				rangeStart = highestDigitIndexes[power+1] + 1
+			}
+			reservedIdx := len(bank) - power
+
+			for i := rangeStart; i < reservedIdx; i++ {
+				digit := bank[i]
+				if digit > highestDigits[power] {
+					highestDigits[power] = digit
+					highestDigitIndexes[power] = i
+				}
+			}
+
+		}
+
+		var joltage int
+		for power := 11; power >= 0; power-- {
+			joltage += highestDigits[power] * int(math.Pow(10, float64(power)))
+		}
+		total += joltage
+
 	}
 	return total
 }
