@@ -42,11 +42,38 @@ func main() {
 	var startTime = time.Now()
 	result := part1(input)
 	fmt.Printf("Part 1: %d\n", result)
-	executionTime := time.Since(startTime).Microseconds()
-	fmt.Printf("Completed Part 1 in %d µs\n\n", executionTime)
+	executionTime := time.Since(startTime).Milliseconds()
+	fmt.Printf("Completed Part 1 in %d ms\n\n", executionTime)
+
+	startTime = time.Now()
+	result = part2(input)
+	fmt.Printf("Part 2: %d\n", result)
+	executionTime = time.Since(startTime).Milliseconds()
+	fmt.Printf("Completed Part 2 in %d ms\n\n", executionTime)
 }
 
 func part1(input []string) int {
+	rolls, neighborCounts := initPuzzle(input)
+
+	return removeRolls(rolls, neighborCounts)
+}
+
+func part2(input []string) int {
+
+	rolls, neighborCounts := initPuzzle(input)
+
+	removedTotal := 0
+	for {
+		removed := removeRolls(rolls, neighborCounts)
+		removedTotal += removed
+		if removed == 0 {
+			break
+		}
+	}
+	return removedTotal
+}
+
+func initPuzzle(input []string) (map[image.Point]bool, [][]int) {
 	mapHeight := len(input)
 	mapWidth := len(input[0])
 
@@ -70,12 +97,32 @@ func part1(input []string) int {
 			}
 		}
 	}
+	return rolls, neighborCounts
+}
 
-	movableTotal := 0
-	for roll := range rolls {
+func removeRolls(rollLocations map[image.Point]bool, neighborCounts [][]int) int {
+
+	mapHeight := len(neighborCounts)
+	mapWidth := len(neighborCounts[0])
+
+	movedTotal := 0
+	toDecrementMap := make(map[image.Point]int)
+	for roll := range rollLocations {
 		if neighborCounts[roll.Y][roll.X] < 4 {
-			movableTotal++
+
+			for _, dir := range allDirections {
+				adj := roll.Add(dir)
+				if adj.X >= 0 && adj.X < mapWidth && adj.Y >= 0 && adj.Y < mapHeight {
+					toDecrementMap[adj] = toDecrementMap[adj] + 1
+				}
+			}
+			delete(rollLocations, roll)
+			movedTotal++
 		}
 	}
-	return movableTotal
+	for adj, val := range toDecrementMap {
+		neighborCounts[adj.Y][adj.X] = neighborCounts[adj.Y][adj.X] - val
+	}
+
+	return movedTotal
 }
