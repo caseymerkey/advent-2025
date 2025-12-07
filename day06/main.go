@@ -51,11 +51,11 @@ func main() {
 	executionTime := time.Since(startTime).Microseconds()
 	fmt.Printf("Completed Part 1 in %d µs\n\n", executionTime)
 
-	// startTime = time.Now()
-	// result = part2(input)
-	// fmt.Printf("Part 2: %d\n", result)
-	// executionTime = time.Since(startTime).Microseconds()
-	// fmt.Printf("Completed Part 2 in %d µs\n\n", executionTime)
+	startTime = time.Now()
+	result = part2(input)
+	fmt.Printf("Part 2: %d\n", result)
+	executionTime = time.Since(startTime).Microseconds()
+	fmt.Printf("Completed Part 2 in %d µs\n\n", executionTime)
 }
 
 func part1(input []string) int {
@@ -80,6 +80,61 @@ func part1(input []string) int {
 		}
 
 		total += operation(values)
+	}
+
+	return total
+}
+
+func part2(input []string) int {
+	total := 0
+
+	lastRow := len(input) - 1
+	col := 0
+	var problem int
+	var operation func([]int) int
+	for {
+		var numBuilder strings.Builder
+		strikes := 0
+
+		if len(input[lastRow]) > col {
+			switch input[lastRow][col] {
+			case '+':
+				operation = addition
+				problem = 0
+			case '*':
+				operation = multiplication
+				problem = 1
+			}
+		} else {
+			strikes++
+		}
+
+		for row := range lastRow {
+			if len(input[row]) > col {
+
+				n := input[row][col]
+				if n != ' ' {
+					numBuilder.WriteByte(n)
+				}
+
+				strikes = 0
+			} else {
+				strikes++
+			}
+		}
+		numStr := numBuilder.String()
+		if len(numStr) > 0 {
+			num, _ := strconv.Atoi(numStr)
+			problem = operation([]int{problem, num})
+		} else {
+			// time to start a new problem
+			total += problem
+			problem = 0
+		}
+		if strikes == len(input) {
+			break
+		}
+		col++
 	}
 
 	return total
