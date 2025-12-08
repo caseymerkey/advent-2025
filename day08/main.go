@@ -89,11 +89,11 @@ func main() {
 	executionTime := time.Since(startTime).Milliseconds()
 	fmt.Printf("Completed Part 1 in %d ms\n\n", executionTime)
 
-	// startTime = time.Now()
-	// result = part2(input)
-	// fmt.Printf("Part 2: %d\n", result)
-	// executionTime = time.Since(startTime).Microseconds()
-	// fmt.Printf("Completed Part 2 in %d µs\n\n", executionTime)
+	startTime = time.Now()
+	result = part2(input)
+	fmt.Printf("Part 2: %d\n", result)
+	executionTime = time.Since(startTime).Milliseconds()
+	fmt.Printf("Completed Part 2 in %d ms\n\n", executionTime)
 }
 
 func part1(input []string) int {
@@ -183,8 +183,94 @@ func part1(input []string) int {
 		product *= len(allCircuits[k].Points)
 	}
 
-	// 5814 is too low
 	return product
+}
+
+func part2(input []string) int {
+	allPoints := make([]Point3D, 0)
+	for _, line := range input {
+		valStrs := strings.Split(line, ",")
+		x, _ := strconv.Atoi(valStrs[0])
+		y, _ := strconv.Atoi(valStrs[1])
+		z, _ := strconv.Atoi(valStrs[2])
+		point := Point3D{X: x, Y: y, Z: z}
+		allPoints = append(allPoints, point)
+	}
+
+	comboMap := make(map[string]bool)
+	pq := make(PriorityQueue, 0)
+	heap.Init(&pq)
+	for _, a := range allPoints {
+		for _, b := range allPoints {
+			if a != b {
+				var key string
+				if a.String() < b.String() {
+					key = fmt.Sprintf("%v-%v", a, b)
+				} else {
+					key = fmt.Sprintf("%v-%v", b, a)
+				}
+				if comboMap[key] {
+					continue
+				}
+				comboMap[key] = true
+				item := &QueueItem{Value: [2]Point3D{a, b}, Priority: distanceBetween(a, b)}
+				heap.Push(&pq, item)
+			}
+		}
+	}
+	allCircuits := make([]*Circuit, 0)
+	pointCircuitMap := make(map[Point3D]*Circuit)
+
+	k := 0
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*QueueItem)
+		ptA := item.Value[0]
+		ptB := item.Value[1]
+
+		circA, foundA := pointCircuitMap[ptA]
+		circB, foundB := pointCircuitMap[ptB]
+
+		circuitLength := 2
+
+		if foundA && foundB {
+			// both these points are in circuits already. merge the circuits
+			// first make sure they're not already in the same circuit
+			if circA != circB {
+				// copy all of B's points to circA and update the reference map
+				for pt, _ := range circB.Points {
+					circA.Points[pt] = true
+					pointCircuitMap[pt] = circA
+				}
+				circuitLength = len(circA.Points)
+				// clear out circB
+				circB.Points = map[Point3D]bool{}
+			}
+		} else if foundA {
+			// A is in a circuit already but B is not. Add B to A's circuit
+			circA.Points[ptB] = true
+			circuitLength = len(circA.Points)
+			pointCircuitMap[ptB] = circA
+		} else if foundB {
+			// B is in a circuit already but A is not. Add A to B's circuit
+			circB.Points[ptA] = true
+			circuitLength = len(circB.Points)
+			pointCircuitMap[ptA] = circB
+		} else {
+			// This is a brand new circuit
+			newCircuit := Circuit{Id: k, Points: make(map[Point3D]bool)}
+			newCircuit.Points[ptA] = true
+			newCircuit.Points[ptB] = true
+			allCircuits = append(allCircuits, &newCircuit)
+			pointCircuitMap[ptA] = &newCircuit
+			pointCircuitMap[ptB] = &newCircuit
+		}
+		if circuitLength == len(input) {
+			return ptA.X * ptB.X
+		}
+
+		k++
+	}
+	return 0
 }
 
 func distanceBetween(a, b Point3D) float64 {
