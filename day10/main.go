@@ -36,6 +36,11 @@ func (q *Queue) IsEmpty() bool {
 	return len(*q) == 0
 }
 
+type PressesAndJoltages struct {
+	ButtonPresses int
+	Joltages      []int
+}
+
 func main() {
 
 	inputFile := "sample.txt"
@@ -61,11 +66,11 @@ func main() {
 	executionTime := time.Since(startTime).Milliseconds()
 	fmt.Printf("Completed Part 1 in %d ms\n\n", executionTime)
 
-	// startTime = time.Now()
-	// result = part2(input)
-	// fmt.Printf("Part 2: %d\n", result)
-	// executionTime = time.Since(startTime).Milliseconds()
-	// fmt.Printf("Completed Part 2 in %d ms\n\n", executionTime)
+	startTime = time.Now()
+	result = part2(input)
+	fmt.Printf("Part 2: %d\n", result)
+	executionTime = time.Since(startTime).Milliseconds()
+	fmt.Printf("Completed Part 2 in %d ms\n\n", executionTime)
 }
 
 func part1(input []string) int {
@@ -146,6 +151,148 @@ func readGoalState(goalString string) int {
 	return int(state)
 }
 
-// func button(buttonString string) int {
+// Borrowed heavily from https://github.com/JoanaBLate/advent-of-code-js/blob/main/2025/day10-solve2.js, which, in
+// turn leveraged https://www.reddit.com/r/adventofcode/comments/1pk87hl/2025_day_10_part_2_bifurcate_your_way_to_victory/
+func part2(input []string) int {
+	var result float64
+	for _, line := range input {
+		joltages := readJoltages(line)
+		buttons := readButtons(line)
+		cache := make(map[string]float64)
 
-// }
+		combosByPattern := combosByPattern(buttons, len(joltages))
+
+		var countPresses func(target []int, level int) float64
+		countPresses = func(target []int, level int) float64 {
+			var sb strings.Builder
+			for i, n := range target {
+				if i > 0 {
+					sb.WriteString(",")
+				}
+				sb.WriteString(strconv.Itoa(n))
+			}
+			key := sb.String()
+			val, found := cache[key]
+			if found {
+				return float64(val)
+			}
+
+			onlyZeroes := true
+			for _, jolt := range target {
+				switch {
+				case jolt < 0:
+					return math.Inf(1)
+				case jolt > 0:
+					onlyZeroes = false
+				}
+			}
+			if onlyZeroes {
+				return 0
+			}
+
+			parityPattern := parityPattern(target)
+
+			total := math.Inf(1)
+
+			combos, found := combosByPattern[parityPattern]
+			if !found {
+				cache[key] = total
+				return total
+			}
+
+			for _, combo := range combos {
+				halfTarget := make([]int, len(target))
+				for i, j := range combo.Joltages {
+					halfTarget[i] = (target[i] - j) / 2
+				}
+
+				presses := float64(combo.ButtonPresses) + 2*countPresses(halfTarget, level+1)
+
+				if presses < total {
+					total = presses
+				}
+			}
+			cache[key] = total
+			return total
+		}
+		result += countPresses(joltages, 1)
+	}
+	return int(result)
+}
+
+func readJoltages(line string) []int {
+	joltages := make([]int, 0)
+	segments := strings.Split(line, " ")
+	segment := segments[len(segments)-1]
+	segment = segment[1 : len(segment)-1]
+	for nStr := range strings.SplitSeq(segment, ",") {
+		n, _ := strconv.Atoi(nStr)
+		joltages = append(joltages, n)
+	}
+	return joltages
+}
+
+func readButtons(line string) [][]int {
+
+	segments := strings.Split(line, " ")
+	segments = segments[1 : len(segments)-1]
+
+	buttons := make([][]int, 0)
+	for _, segment := range segments {
+		button := make([]int, 0)
+		numStrs := segment[1 : len(segment)-1]
+		for nStr := range strings.SplitSeq(numStrs, ",") {
+			n, _ := strconv.Atoi(nStr)
+			button = append(button, n)
+		}
+		buttons = append(buttons, button)
+	}
+	return buttons
+}
+
+func combosByPattern(buttons [][]int, bitcount int) map[string][]PressesAndJoltages {
+	//combos is a map of the even-odd parity pattern to
+	// a secondary map of button presses that generate that pattern,
+	// and their corresponding joltages produced
+	combos := make(map[string][]PressesAndJoltages)
+
+	maxComboCount := int(math.Pow(2, float64(len(buttons))))
+	for i := range maxComboCount {
+		joltages := make([]int, bitcount)
+		buttonsPressed := make([][]int, 0)
+		for k := range len(buttons) {
+			n := int(math.Pow(2, float64(k)))
+			if (i & n) == n {
+				buttonsPressed = append(buttonsPressed, buttons[k])
+			}
+		}
+
+		for _, b := range buttonsPressed {
+			joltages = pressButton(b, joltages)
+		}
+		joltageParityPattern := parityPattern(joltages)
+		psAndJs, found := combos[joltageParityPattern]
+		if !found {
+			psAndJs = make([]PressesAndJoltages, 0)
+		}
+		psAndJs = append(psAndJs, PressesAndJoltages{ButtonPresses: len(buttonsPressed), Joltages: joltages})
+		combos[joltageParityPattern] = psAndJs
+	}
+
+	return combos
+}
+
+func pressButton(button []int, joltages []int) []int {
+	for _, n := range button {
+		joltages[n] = joltages[n] + 1
+	}
+	return joltages
+}
+
+func parityPattern(joltages []int) string {
+	var b strings.Builder
+	for _, val := range joltages {
+		b.WriteString(strconv.Itoa(val % 2))
+	}
+	return b.String()
+}
